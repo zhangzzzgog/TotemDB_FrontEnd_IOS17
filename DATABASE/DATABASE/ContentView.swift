@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  DATABASE
 //
-//  Created by 张一麟 on 2024/5/14.
+//  Created by 张一麟 on 2024/5/15.
 //
 
 import SwiftUI
@@ -10,74 +10,121 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         NavigationView {
-            VStack {
-                NavigationLink(destination: CommandInputView()) {
-                    Text("Go to Command Input")
+            ZStack {
+                LinearGradient(gradient: Gradient(colors: [Color.blue, Color.white]), startPoint: .top, endPoint: .bottom)
+                    .edgesIgnoringSafeArea(.all)
+                
+                VStack(spacing: 20) {
+                    Image(systemName: "server.rack")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 100, height: 100)
+                        .foregroundColor(.white)
+                        .padding(.top, 50)
+                    
+                    Text("Welcome to SQL Command Executor")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.top, 20)
+                    
+                    Text("Easily execute SQL commands and view the results.")
                         .font(.headline)
                         .foregroundColor(.white)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(10)
-                        .shadow(radius: 5)
+                        .padding(.horizontal)
+                        .multilineTextAlignment(.center)
+                    
+                    Spacer()
+                    
+                    NavigationLink(destination: CommandInputView()) {
+                        Text("Go to Command Input")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 5)
+                    }
+                    .padding(.horizontal)
+                    
+                    NavigationLink(destination: ResultsView()) {
+                        Text("Go to Results")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .shadow(radius: 5)
+                    }
+                    .padding(.horizontal)
+                    
+                    Spacer()
                 }
                 .padding()
-                
-                NavigationLink(destination: ResultsView()) {
-                    Text("Go to Results")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(10)
-                        .shadow(radius: 5)
-                }
-                .padding()
-                
-                Spacer()
             }
             .navigationBarTitle("SQL Command Executor", displayMode: .inline)
-            .padding()
         }
     }
 }
 
 struct CommandInputView: View {
     @EnvironmentObject var viewModel: CommandViewModel
+    @State private var navigateToResults = false
 
     var body: some View {
-        VStack {
-            // 多行输入框
-            TextEditor(text: $viewModel.command)
-                .frame(height: 150)
-                .padding()
-                .background(Color.white)
-                .cornerRadius(8)
-                .shadow(radius: 5)
-                .padding(.horizontal)
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [Color.white, Color.blue.opacity(0.3)]), startPoint: .top, endPoint: .bottom)
+                .edgesIgnoringSafeArea(.all)
             
-            // 执行按钮
-            Button(action: viewModel.executeCommands) {
-                Text("Execute")
-                    .font(.headline)
-                    .foregroundColor(.white)
+            VStack {
+                NavigationLink(destination: ResultsView(), isActive: $navigateToResults) { EmptyView() }
+                
+                Text("Enter your SQL commands:")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .padding(.top)
+                
+                // 多行输入框
+                TextEditor(text: $viewModel.command)
+                    .frame(height: 150)
                     .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .cornerRadius(10)
+                    .background(Color.white)
+                    .cornerRadius(8)
                     .shadow(radius: 5)
+                    .padding(.horizontal)
+                
+                // 执行按钮
+                Button(action: {
+                    viewModel.executeCommands {
+                        withAnimation {
+                            navigateToResults = true
+                        }
+                    }
+                }) {
+                    Text("Execute")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                        .shadow(radius: 5)
+                }
+                .padding(.horizontal)
+                
+                // 活动指示器
+                if viewModel.isLoading {
+                    ProgressView("Executing...")
+                        .padding()
+                }
+                
+                Spacer()
             }
-            .padding(.horizontal)
-            
-            // 活动指示器
-            if viewModel.isLoading {
-                ProgressView("Executing...")
-                    .padding()
-            }
-            
-            Spacer()
+            .navigationBarTitle("Command Input", displayMode: .inline)
+            .padding()
         }
-        .navigationBarTitle("Command Input", displayMode: .inline)
-        .padding()
     }
 }
 
@@ -85,16 +132,21 @@ struct ResultsView: View {
     @EnvironmentObject var viewModel: CommandViewModel
 
     var body: some View {
-        List {
-            ForEach(viewModel.queries.indices, id: \.self) { queryIndex in
-                NavigationLink(destination: QueryResultView(queryIndex: queryIndex)) {
-                    Text(viewModel.queries[queryIndex].command)
-                        .font(.headline)
-                        .padding()
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [Color.white, Color.blue.opacity(0.3)]), startPoint: .top, endPoint: .bottom)
+                .edgesIgnoringSafeArea(.all)
+            
+            List {
+                ForEach(viewModel.queries.indices, id: \.self) { queryIndex in
+                    NavigationLink(destination: QueryResultView(queryIndex: queryIndex)) {
+                        Text(viewModel.queries[queryIndex].command)
+                            .font(.headline)
+                            .padding()
+                    }
                 }
             }
+            .navigationBarTitle("Results", displayMode: .inline)
         }
-        .navigationBarTitle("Results", displayMode: .inline)
     }
 }
 
@@ -103,21 +155,26 @@ struct QueryResultView: View {
     let queryIndex: Int
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading) {
-                Text("Command: \(viewModel.queries[queryIndex].command)")
-                    .font(.headline)
-                    .padding(.bottom, 5)
-                
-                if viewModel.parsedResults[queryIndex].isTable {
-                    TableView(tables: viewModel.parsedResults[queryIndex].data)
-                } else {
-                    NonTableView(nonTableData: viewModel.parsedResults[queryIndex].data.flatMap { $0 })
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [Color.white, Color.blue.opacity(0.3)]), startPoint: .top, endPoint: .bottom)
+                .edgesIgnoringSafeArea(.all)
+            
+            ScrollView {
+                VStack(alignment: .leading) {
+                    Text("Command: \(viewModel.queries[queryIndex].command)")
+                        .font(.headline)
+                        .padding(.bottom, 5)
+                    
+                    if viewModel.parsedResults[queryIndex].isTable {
+                        TableView(tables: viewModel.parsedResults[queryIndex].data)
+                    } else {
+                        NonTableView(nonTableData: viewModel.parsedResults[queryIndex].data.flatMap { $0 })
+                    }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            .navigationBarTitle("Query Result", displayMode: .inline)
         }
-        .navigationBarTitle("Query Result", displayMode: .inline)
     }
 }
 
@@ -168,7 +225,7 @@ class CommandViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
 
-    func executeCommands() {
+    func executeCommands(completion: @escaping () -> Void) {
         let commands = command.split(separator: "\n").map { String($0) }
         queries = []
         parsedResults = []
@@ -178,12 +235,21 @@ class CommandViewModel: ObservableObject {
             parsedResults.append(ParsedResult(isTable: false, data: []))
         }
 
+        let group = DispatchGroup()
+        
         for (index, cmd) in commands.enumerated() {
-            executeCommand(cmd, index: index)
+            group.enter()
+            executeCommand(cmd, index: index) {
+                group.leave()
+            }
+        }
+        
+        group.notify(queue: .main) {
+            completion()
         }
     }
     
-    private func executeCommand(_ command: String, index: Int) {
+    private func executeCommand(_ command: String, index: Int, completion: @escaping () -> Void) {
         guard let url = URL(string: "http://localhost:3000/execute") else { return }
         
         var request = URLRequest(url: url)
@@ -197,6 +263,10 @@ class CommandViewModel: ObservableObject {
         errorMessage = nil
         
         URLSession.shared.dataTask(with: request) { data, response, error in
+            defer {
+                completion()
+            }
+            
             DispatchQueue.main.async {
                 self.isLoading = false
             }
@@ -255,3 +325,5 @@ struct ParsedResult {
     var isTable: Bool
     var data: [[String]]
 }
+
+
