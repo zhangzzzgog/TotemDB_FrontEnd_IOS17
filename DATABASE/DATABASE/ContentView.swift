@@ -8,88 +8,182 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var command: String = ""
-    @State private var result: String = ""
-    @State private var errorMessage: String?
-    @State private var isLoading: Bool = false
-
     var body: some View {
         NavigationView {
-            ZStack {
-                // 背景颜色
-                Color(.systemGray6)
-                    .edgesIgnoringSafeArea(.all)
-                
-                VStack {
-                    // 标题
-                    Text("SQL Command Executor")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .padding(.top)
-                    
-                    // 输入框
-                    TextField("Enter SQL Command", text: $command)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(8)
-                        .shadow(radius: 5)
-                        .padding(.horizontal)
-                    
-                    // 执行按钮
-                    Button(action: executeCommand) {
-                        Text("Execute")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .cornerRadius(10)
-                            .shadow(radius: 5)
-                    }
-                    .padding(.horizontal)
-                    
-                    // 活动指示器
-                    if isLoading {
-                        ProgressView("Executing...")
-                            .padding()
-                    }
-                    
-                    // 结果显示
-                    Text("Result:")
+            VStack {
+                NavigationLink(destination: CommandInputView()) {
+                    Text("Go to Command Input")
                         .font(.headline)
-                        .padding(.top)
-                    
-                    ScrollView {
-                        Text(result)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(8)
-                            .shadow(radius: 5)
-                            .padding(.horizontal)
-                    }
-                    .frame(maxHeight: 300) // 限制结果显示区的最大高度
-                    
-                    // 错误消息
-                    if let errorMessage = errorMessage {
-                        Text("Error: \(errorMessage)")
-                            .foregroundColor(.red)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(8)
-                            .shadow(radius: 5)
-                            .padding(.horizontal)
-                    }
-                    
-                    Spacer()
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                        .shadow(radius: 5)
                 }
-                .navigationBarTitle("Database Interface", displayMode: .inline)
                 .padding()
+                
+                NavigationLink(destination: ResultsView()) {
+                    Text("Go to Results")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                        .shadow(radius: 5)
+                }
+                .padding()
+                
+                Spacer()
+            }
+            .navigationBarTitle("SQL Command Executor", displayMode: .inline)
+            .padding()
+        }
+    }
+}
+
+struct CommandInputView: View {
+    @EnvironmentObject var viewModel: CommandViewModel
+
+    var body: some View {
+        VStack {
+            // 多行输入框
+            TextEditor(text: $viewModel.command)
+                .frame(height: 150)
+                .padding()
+                .background(Color.white)
+                .cornerRadius(8)
+                .shadow(radius: 5)
+                .padding(.horizontal)
+            
+            // 执行按钮
+            Button(action: viewModel.executeCommands) {
+                Text("Execute")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .cornerRadius(10)
+                    .shadow(radius: 5)
+            }
+            .padding(.horizontal)
+            
+            // 活动指示器
+            if viewModel.isLoading {
+                ProgressView("Executing...")
+                    .padding()
+            }
+            
+            Spacer()
+        }
+        .navigationBarTitle("Command Input", displayMode: .inline)
+        .padding()
+    }
+}
+
+struct ResultsView: View {
+    @EnvironmentObject var viewModel: CommandViewModel
+
+    var body: some View {
+        List {
+            ForEach(viewModel.queries.indices, id: \.self) { queryIndex in
+                NavigationLink(destination: QueryResultView(queryIndex: queryIndex)) {
+                    Text(viewModel.queries[queryIndex].command)
+                        .font(.headline)
+                        .padding()
+                }
+            }
+        }
+        .navigationBarTitle("Results", displayMode: .inline)
+    }
+}
+
+struct QueryResultView: View {
+    @EnvironmentObject var viewModel: CommandViewModel
+    let queryIndex: Int
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading) {
+                Text("Command: \(viewModel.queries[queryIndex].command)")
+                    .font(.headline)
+                    .padding(.bottom, 5)
+                
+                if viewModel.parsedResults[queryIndex].isTable {
+                    TableView(tables: viewModel.parsedResults[queryIndex].data)
+                } else {
+                    NonTableView(nonTableData: viewModel.parsedResults[queryIndex].data.flatMap { $0 })
+                }
+            }
+            .padding(.horizontal)
+        }
+        .navigationBarTitle("Query Result", displayMode: .inline)
+    }
+}
+
+struct TableView: View {
+    let tables: [[String]]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(tables.indices, id: \.self) { rowIndex in
+                HStack {
+                    ForEach(tables[rowIndex].indices, id: \.self) { columnIndex in
+                        Text(tables[rowIndex][columnIndex])
+                            .padding(8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(rowIndex == 0 ? Color.blue.opacity(0.7) : Color.white)
+                            .foregroundColor(rowIndex == 0 ? .white : .black)
+                            .border(Color.gray, width: 0.5)
+                    }
+                }
+            }
+        }
+        .padding(.bottom, 20)
+    }
+}
+
+struct NonTableView: View {
+    let nonTableData: [String]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(nonTableData, id: \.self) { item in
+                Text(item)
+                    .padding(8)
+                    .background(Color.white)
+                    .cornerRadius(5)
+                    .shadow(radius: 2)
+                    .padding(.horizontal)
+                    .padding(.bottom, 2)
             }
         }
     }
+}
+
+class CommandViewModel: ObservableObject {
+    @Published var command: String = ""
+    @Published var queries: [(command: String, result: String)] = []  // 存储查询及其结果
+    @Published var parsedResults: [ParsedResult] = []  // 存储解析后的多个表格和非表格数据
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+
+    func executeCommands() {
+        let commands = command.split(separator: "\n").map { String($0) }
+        queries = []
+        parsedResults = []
+        
+        for cmd in commands {
+            queries.append((command: cmd, result: ""))
+            parsedResults.append(ParsedResult(isTable: false, data: []))
+        }
+
+        for (index, cmd) in commands.enumerated() {
+            executeCommand(cmd, index: index)
+        }
+    }
     
-    func executeCommand() {
+    private func executeCommand(_ command: String, index: Int) {
         guard let url = URL(string: "http://localhost:3000/execute") else { return }
         
         var request = URLRequest(url: url)
@@ -101,11 +195,10 @@ struct ContentView: View {
         
         isLoading = true
         errorMessage = nil
-        result = ""
         
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
-                isLoading = false
+                self.isLoading = false
             }
             if let error = error {
                 DispatchQueue.main.async {
@@ -121,9 +214,21 @@ struct ContentView: View {
                 return
             }
             
-            if let result = String(data: data, encoding: .utf8) {
+            if let responseString = String(data: data, encoding: .utf8) {
                 DispatchQueue.main.async {
-                    self.result = result
+                    // 更新查询的结果
+                    self.queries[index].result = responseString
+                    
+                    let results = responseString.components(separatedBy: "\n\n")
+                    var parsedResult: ParsedResult
+                    
+                    if results.contains(where: { $0.contains("|") }) {
+                        parsedResult = ParsedResult(isTable: true, data: results.flatMap { $0.contains("|") ? self.parseResponse($0) : [[]] })
+                    } else {
+                        parsedResult = ParsedResult(isTable: false, data: results.map { [$0] })
+                    }
+                    
+                    self.parsedResults[index] = parsedResult
                     self.errorMessage = nil
                 }
             } else {
@@ -133,4 +238,20 @@ struct ContentView: View {
             }
         }.resume()
     }
+    
+    private func parseResponse(_ response: String) -> [[String]] {
+        var result: [[String]] = []
+        let rows = response.split(separator: "\n")
+        for row in rows {
+            let trimmedRow = row.trimmingCharacters(in: .whitespaces)
+            let columns = trimmedRow.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+            result.append(columns)
+        }
+        return result
+    }
+}
+
+struct ParsedResult {
+    var isTable: Bool
+    var data: [[String]]
 }

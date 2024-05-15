@@ -7,11 +7,21 @@
 
 import SwiftUI
 
+//@main
+//struct DATABASEApp: App {
+//    var body: some Scene {
+//        WindowGroup {
+//            ContentView()
+//        }
+//    }
+//}
+
 @main
-struct DATABASEApp: App {
+struct DatabaseApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(CommandViewModel())
         }
     }
 }
